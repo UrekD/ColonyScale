@@ -1,0 +1,44 @@
+Colony Scale A/B benchmark
+game 1.6.4871 rev591, map pawns 132, colonists 43, things 37978
+blocks 2x2 of 300 ticks, 15 ticks/frame, warmup 600, 120 discarded ticks after each of 3 on/off switches
+off: 5.215 ms/tick (median 5.215)  errors 0
+on:  7.601 ms/tick (median 7.601)  errors 0
+speedup: -45.8% less tick time; tick-only TPS ceiling 192 -> 132 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	5.3385	0
+1	on	7.2828	1
+2	on	7.9187	1
+3	off	5.0910	0
+optimizations under test: reachabilityClearHostile, mergeSameDef, reservationIndex, textSizeCache, silhouetteCache, windSwayPerFrame, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, questLodgerScan, situationalThoughts, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick
+VERIFY RUN (timings not meaningful). verify results (checks / mismatches):
+  bloodRain: 178200 / 0
+  contentsTickSkip: 204338 / 0
+  fastList.contains: 9492 / 0
+  fastList.remove: 24592 / 0
+  gasGridEarlyOut: 3863333 / 0
+  haulablesCellDedupe: 1320 / 0
+  hediffTickPlan: 297000 / 0
+  hiddenDeselect: 178200 / 0
+  idleAbilities: 11880 / 0
+  moodTotal: 318 / 0
+  musicListeningShortcut: 1320 / 0
+  nonSlotStorage: 4049 / 0
+  overlayCulling: 1056 / 0
+  overseerSubject.tick: 3960 / 0
+  pawnPreDrawSkip: 15207 / 0
+  questLodgerScan: 145670 / 0
+  questReserveFilter: 8956 / 0
+  reservationIndex.CanReserve: 61771 / 0
+  reservationIndex.FirstRespectedReserver: 23 / 0
+  reservationIndex.index: 358 / 0
+  reservationIndex.IsReserved: 44 / 0
+  reservationIndex.ReservedBy: 20709 / 0
+  reservationIndex.TryGetReserver: 14 / 0
+  resourceCounter: 181 / 0
+  settlementIdleTick: 120736 / 0
+  situationalThoughts: 178068 / 0
+  spawnedPawnWorldChecks: 588546 / 0
+  statusEffecters: 272601 / 0
+  textSizeCache: 11610 / 0
+  windSwayPerFrame: 88 / 0
+  worldPathGridDaily: 2 / 0

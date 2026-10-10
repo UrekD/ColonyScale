@@ -1,0 +1,20 @@
+Colony Scale A/B benchmark
+game 1.6.4871 rev591, map pawns 153, colonists 43, things 40297
+blocks 6x2 of 1000 ticks, 15 ticks/frame, warmup 600, 120 discarded ticks after each of 7 on/off switches
+off: 5.042 ms/tick (median 5.044)  errors 0
+on:  4.115 ms/tick (median 4.055)  errors 0
+speedup: 18.4% less tick time; tick-only TPS ceiling 198 -> 243 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	5.4483	0
+1	on	4.1660	0
+2	on	4.0168	0
+3	off	4.7559	0
+4	off	5.4418	0
+5	on	3.8744	0
+6	on	4.0698	0
+7	off	5.2029	0
+8	off	4.8848	0
+9	on	4.5218	0
+10	on	4.0394	0
+11	off	4.5178	0
+optimizations under test: reachabilityClearHostile, mergeSameDef, reservationIndex, textSizeCache, silhouetteCache, windSwayPerFrame, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, questLodgerScan, situationalThoughts, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick

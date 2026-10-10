@@ -1,0 +1,26 @@
+# RimWorld game install (Ludeon Studios files). This repo tracks only our mod, tooling and docs.
+/Data/
+/MonoBleedingEdge/
+/RimWorldWin64_Data/
+/RimWorldWin64.exe
+/UnityPlayer.dll
+/Source/
+
+# Local tool state and scratch (decompiled game code lives in .work/ and must never be committed)
+/.serena/
+/graphify-out/
+/.work/
+
+# Build outputs
+bin/
+obj/
+
+# Built mod assembly (produced by `make build`) and test-only mods used by the headless harness
+/Mods/ColonyScale/Assemblies/
+/Mods/Harmony/
+
+worktrees/
+/dist/
+
+# Local IL baseline for `make update` (disassembled game code; never publish it)
+/tools/baseline/

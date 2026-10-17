@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>ColonyScale</AssemblyName>
     <RootNamespace>ColonyScale</RootNamespace>
     <LangVersion>latest</LangVersion>
@@ -11,23 +11,26 @@
     <Optimize>true</Optimize>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- The game install: RIMWORLD_DIR, else the nearest ancestor folder that holds the game's managed DLLs
-         (the repo is overlaid on a RimWorld install, so this also resolves from git worktrees nested inside it). -->
+    <!-- The game install: RIMWORLD_DIR, else the nearest ancestor folder that holds the game's Assembly-CSharp.dll
+         (repo overlaid on a RimWorld install), else a RimWorld/ subfolder of the nearest ancestor that has one
+         (repo cloned next to the install). Both also resolve from git worktrees nested inside the repo.
+         Same rule as tools/rimworld-dir.sh. -->
     <RimWorldDir Condition="'$(RIMWORLD_DIR)' != ''">$(RIMWORLD_DIR)</RimWorldDir>
-    <RimWorldDir Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'RimWorldWin64_Data/Managed/Assembly-CSharp.dll'))</RimWorldDir>
-    <ManagedDir>$(RimWorldDir)/RimWorldWin64_Data/Managed</ManagedDir>
+    <RimWorldDir Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Assembly-CSharp.dll'))</RimWorldDir>
+    <RimWorldParent Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'RimWorld/Assembly-CSharp.dll'))</RimWorldParent>
+    <RimWorldDir Condition="'$(RimWorldDir)' == '' and '$(RimWorldParent)' != ''">$(RimWorldParent)/RimWorld</RimWorldDir>
+    <ManagedDir>$(RimWorldDir)</ManagedDir>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Compile-time only: at runtime the Harmony mod (brrainz.harmony) provides 0Harmony.dll. -->
-    <PackageReference Include="Lib.Harmony" Version="2.4.1" ExcludeAssets="runtime" />
+    <PackageReference Include="Lib.Harmony" Version="3.0.0-rc.3" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ManagedDir)/UnityEngine.IMGUIModule.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(ManagedDir)/UnityEngine.TextRenderingModule.dll</HintPath><Private>False</Private></Reference>
+    <!-- 1.7 has no Unity: the game redirects UnityEngine* to UnityStubs.dll. -->
+    <Reference Include="UnityStubs"><HintPath>$(ManagedDir)/UnityStubs.dll</HintPath><Private>False</Private></Reference>
   </ItemGroup>
 
   <Target Name="CopyToAssemblies" AfterTargets="Build">

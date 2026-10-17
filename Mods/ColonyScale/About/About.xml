@@ -4,7 +4,7 @@
   <author>UrekD</author>
   <packageId>UrekD.ColonyScale</packageId>
   <supportedVersions>
-    <li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
   <modDependencies>
     <li>
@@ -23,5 +23,5 @@ Every optimization can be toggled in the mod settings. Each patched game method 
 
 Dev mode adds an A/B benchmark (Debug actions → Colony Scale) that measures ms per tick with the optimizations off and on.
 
-Requires Harmony 2.4 or newer; with an older Harmony every optimization stays off and the mod settings say why.</description>
+Requires Harmony (the 1.7 build, Harmony 3); with a Harmony older than 2.4 every optimization stays off and the mod settings say why.</description>
 </ModMetaData>

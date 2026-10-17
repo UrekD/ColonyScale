@@ -3,22 +3,29 @@ using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
+using UnityStubs.Gui;
 using Verse;
 
 namespace ColonyScale.Optimizations.Frame
 {
     /// <summary>
-    /// Text.CalcSize measures text through IMGUI on every call (StripTags, a GUIContent update and a native layout),
+    /// Text.CalcSize measures text on every call (StripTags, a GUIContent update and, in 1.7, a full text layout in the
+    /// ImGui backend: GUIStyle.CalcSize -> ImGuiGuiBackend.MeasureText -> TextLayout.Layout),
     /// and labels are measured every frame: three times per humanlike pawn label alone (GenMapUI.DrawPawnLabel ->
     /// GetPawnLabel -> GenText.Truncate). Results are memoized per (font, word wrap, anchor, text); a prefix returns
     /// the stored size and a postfix stores vanilla's result on a miss.
     ///
     /// Exact: CalcSize returns CurFontStyle.CalcSize(StripTags(text)). StripTags is a pure function of the text and
     /// CurFontStyle is fontStyles[Font] after setting its alignment and wordWrap from Anchor and WordWrap, so the
-    /// result depends only on the key and on that style's other properties. Vanilla never changes those after
-    /// Text's static constructor; in case a mod does, the cache of a font is dropped when its font, size, font
-    /// style or rich-text flag differ on any call, or its padding, fixed size, image position, GUI pixel scale or
-    /// Prefs.UIScale differ at the first call of a frame. A hit still evaluates CurFontStyle, so the style is left as vanilla
+    /// result depends only on the key, on that style's other properties and on the backend's fonts. The stub
+    /// GUIStyle.CalcSize lays out text alone (no wrap, no image) from the style's font index, size and font style, and
+    /// the backend's layout depends only on those and on the host's fonts: ImGuiHost.PixelSizeFor is the given size or
+    /// the font's import size, glyph advances come from the fonts, which are only appended, and are rebuilt when
+    /// FontGeneration changes (a language switch picks other fallback fonts). Vanilla never changes the style after
+    /// Text's static constructor; in case a mod does, the cache of a font is dropped when its font, size, font style,
+    /// rich-text flag, the backend instance, its FontGeneration or the clamped font index differ on any call, or its
+    /// padding, fixed size, image position or Prefs.UIScale differ at the first call of a frame. With any other GUI
+    /// backend (or none yet) the cache is bypassed. A hit still evaluates CurFontStyle, so the style is left as vanilla
     /// leaves it; the GUIContent scratch object is private and always overwritten before use. Null/empty text,
     /// a missing font, an invalid Font/Anchor value and calls off the main thread run vanilla. Any other mod's patch
     /// on CalcSize turns this off (a returning-false prefix would also skip theirs), and only results of the
@@ -39,12 +46,19 @@ namespace ColonyScale.Optimizations.Frame
         public override IEnumerable<string> IncompatiblePackageIds => new[] { "Taranchuk.PerformanceOptimizer" };
 
         private static readonly MethodInfo CalcSize = AccessTools.Method(typeof(Text), nameof(Text.CalcSize), new[] { typeof(string) });
-        private static Func<float> pixelsPerPoint;
+        // The 1.7 host types are internal to RimWorld.dll; resolved by name, so a rename leaves DependsOn incomplete
+        // (the optimization stays off) instead of failing to load.
+        private static readonly Type BackendType = AccessTools.TypeByName("RimWorldWaylith.Imgui.ImGuiGuiBackend");
+        private static readonly Type HostType = AccessTools.TypeByName("RimWorldWaylith.Imgui.ImGuiHost");
+        private static AccessTools.FieldRef<object, object> backendHost;
+        private static AccessTools.FieldRef<object, int> hostFontGeneration;
+        private static AccessTools.FieldRef<object, object> hostFonts;
 
         public override IEnumerable<PatchSpec> GetPatches()
         {
-            var ppp = AccessTools.PropertyGetter(typeof(GUIUtility), "pixelsPerPoint") ?? throw new MissingMethodException(nameof(GUIUtility), "pixelsPerPoint");
-            pixelsPerPoint = AccessTools.MethodDelegate<Func<float>>(ppp);
+            backendHost = AccessTools.FieldRefAccess<object>(BackendType, "host");
+            hostFontGeneration = AccessTools.FieldRefAccess<int>(HostType, "fontGeneration");
+            hostFonts = AccessTools.FieldRefAccess<object>(HostType, "fonts");
             yield return PatchSpec.For(CalcSize)
                 .WithPrefix(typeof(TextSizeCache), nameof(Prefix), replacesOriginal: true, priority: Priority.First)
                 .WithPostfix(typeof(TextSizeCache), nameof(Postfix), priority: Priority.First);
@@ -59,6 +73,11 @@ namespace ColonyScale.Optimizations.Frame
             AccessTools.PropertyGetter(typeof(Text), nameof(Text.Anchor)),
             AccessTools.PropertyGetter(typeof(Text), nameof(Text.WordWrap)),
             AccessTools.Method(typeof(ColoredText), nameof(ColoredText.StripTags)),
+            AccessTools.Method(typeof(GUIStyle), nameof(GUIStyle.CalcSize), new[] { typeof(GUIContent) }),
+            AccessTools.Method(BackendType, "MeasureText"),
+            AccessTools.Method(HostType, "PixelSizeFor"),
+            AccessTools.Method(HostType, "SetTextLanguage"),
+            AccessTools.Method(AccessTools.TypeByName("RimWorldWaylith.Imgui.TextLayout"), "Layout"),
         };
 
         public override void ClearCaches()
@@ -81,8 +100,10 @@ namespace ColonyScale.Optimizations.Frame
             public int padLeft, padRight, padTop, padBottom;
             public float fixedWidth, fixedHeight;
             public ImagePosition imagePosition;
-            public float pixelsPerPoint;
             public float uiScale;
+            public object backend;
+            public int fontGeneration;
+            public int fontIndex;
         }
 
         private static readonly StyleState[] styles = new StyleState[3];
@@ -135,15 +156,20 @@ namespace ColonyScale.Optimizations.Frame
             cache[text] = __result;
         }
 
-        /// <summary>False if the font is missing; drops the font's cached sizes if its style changed.</summary>
+        /// <summary>False if the font or the ImGui backend is missing; drops the font's cached sizes if its style or the backend's fonts changed.</summary>
         private static bool StyleValid(int font, GUIStyle style)
         {
             var s = styles[font];
             Font f = style.font;
-            if ((object)f == null) return false;
-            if (s == null || !ReferenceEquals(f, s.font) || style.fontSize != s.fontSize || style.fontStyle != s.fontStyle || style.richText != s.richText)
+            object backend = GuiBackend.Current;
+            if ((object)f == null || backend == null || backend.GetType() != BackendType) return false;
+            object host = backendHost(backend);
+            int generation = System.Threading.Volatile.Read(ref hostFontGeneration(host));
+            int fontIndex = Math.Clamp(style.FontIndex, 0, ((System.Collections.ICollection)hostFonts(host)).Count - 1);
+            if (s == null || !ReferenceEquals(f, s.font) || style.fontSize != s.fontSize || style.fontStyle != s.fontStyle || style.richText != s.richText
+                || !ReferenceEquals(backend, s.backend) || generation != s.fontGeneration || fontIndex != s.fontIndex)
             {
-                Reset(font, style, f);
+                Reset(font, style, f, backend, generation, fontIndex);
                 return true;
             }
             int frame = Time.frameCount;
@@ -153,13 +179,13 @@ namespace ColonyScale.Optimizations.Frame
                 RectOffset pad = style.padding;
                 if (pad.left != s.padLeft || pad.right != s.padRight || pad.top != s.padTop || pad.bottom != s.padBottom
                     || !style.fixedWidth.Equals(s.fixedWidth) || !style.fixedHeight.Equals(s.fixedHeight)
-                    || style.imagePosition != s.imagePosition || !pixelsPerPoint().Equals(s.pixelsPerPoint) || !Prefs.UIScale.Equals(s.uiScale))
-                    Reset(font, style, f);
+                    || style.imagePosition != s.imagePosition || !Prefs.UIScale.Equals(s.uiScale))
+                    Reset(font, style, f, backend, generation, fontIndex);
             }
             return true;
         }
 
-        private static void Reset(int font, GUIStyle style, Font f)
+        private static void Reset(int font, GUIStyle style, Font f, object backend, int generation, int fontIndex)
         {
             for (int i = font * 2 * Anchors; i < (font + 1) * 2 * Anchors; i++) caches[i] = null;
             RectOffset pad = style.padding;
@@ -177,8 +203,10 @@ namespace ColonyScale.Optimizations.Frame
                 fixedWidth = style.fixedWidth,
                 fixedHeight = style.fixedHeight,
                 imagePosition = style.imagePosition,
-                pixelsPerPoint = pixelsPerPoint(),
                 uiScale = Prefs.UIScale,
+                backend = backend,
+                fontGeneration = generation,
+                fontIndex = fontIndex,
             };
         }
     }

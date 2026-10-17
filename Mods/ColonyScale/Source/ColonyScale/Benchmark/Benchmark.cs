@@ -29,6 +29,10 @@ namespace ColonyScale
         public bool quickTest;
         /// <summary>Correctness run: optimizations also run vanilla side by side and count mismatches. Timings are meaningless.</summary>
         public bool verify;
+        /// <summary>Profile run: also times each optimization's patched targets, off vs on (TargetProfiler). Inflates the totals.</summary>
+        public bool profile;
+        /// <summary>Comma-separated optimization ids: only these are switched off and on; the rest stay as they are. Empty: all active ones.</summary>
+        public string only = "";
 
         public static BenchConfig Parse(IEnumerable<string> lines)
         {
@@ -54,6 +58,8 @@ namespace ColonyScale
                     case "quitWhenDone": cfg.quitWhenDone = value == "true"; break;
                     case "start": cfg.quickTest = value == "quicktest"; break;
                     case "verify": cfg.verify = value == "true"; break;
+                    case "profile": cfg.profile = value == "true"; break;
+                    case "only": cfg.only = value; break;
                 }
             }
             return cfg;
@@ -88,6 +94,9 @@ namespace ColonyScale
         private int transitions;
         private bool currentOn = true;        // the mode actually in effect (verified against Harmony's patch state)
         private bool finished;
+        private bool profiling;
+        /// <summary>Active optimizations not under test (ONLY=): on in both modes.</summary>
+        private List<Optimization> keptOn = new List<Optimization>();
 
         public static void Start(BenchConfig cfg, Action<string> onDone)
         {
@@ -97,15 +106,34 @@ namespace ColonyScale
             instance = go.AddComponent<BenchmarkRunner>();
             instance.cfg = cfg;
             instance.onDone = onDone;
-            instance.userActive = PatchManager.All.Where(o => o.IsActive).ToList();
+            var only = new HashSet<string>((cfg.only ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()));
+            var active = PatchManager.All.Where(o => o.IsActive).ToList();
+            instance.userActive = active.Where(o => only.Count == 0 || only.Contains(o.Id)).ToList();
+            instance.keptOn = active.Except(instance.userActive).ToList();
             instance.previousSpeed = Find.TickManager.CurTimeSpeed;
             instance.previousVerify = Verify.Enabled;
             instance.ticksLeft = cfg.warmupTicks;
             Application.logMessageReceived += instance.CountErrors;
+            // ONLY=: every id must name an active optimization, or the run would quietly measure something else.
+            var unknown = only.Where(id => PatchManager.All.All(o => o.Id != id)).ToList();
+            var inactive = only.Where(id => PatchManager.All.Any(o => o.Id == id && !o.IsActive)).ToList();
+            if (unknown.Count > 0 || inactive.Count > 0 || instance.userActive.Count == 0)
+            {
+                instance.Finish("benchmark aborted: nothing valid to switch" +
+                                (unknown.Count > 0 ? "; unknown ids: " + string.Join(", ", unknown) : "") +
+                                (inactive.Count > 0 ? "; not active: " + string.Join(", ", inactive) : ""));
+                return;
+            }
             if (cfg.verify)
             {
                 Verify.Reset();
                 Verify.Enabled = true;
+            }
+            if (cfg.profile)
+            {
+                TargetProfiler.Reset();
+                TargetProfiler.Install(instance.userActive);
+                instance.profiling = true;
             }
             CSLog.Message($"benchmark started: {cfg.rounds} rounds x 2 x {cfg.blockTicks} ticks, {instance.userActive.Count} optimizations under test");
         }
@@ -139,7 +167,9 @@ namespace ColonyScale
                 // Checked before every tick, since a tick can open a dialog or queue a long event.
                 if (tickManager.ForcePaused || LongEventHandler.ShouldWaitForEvent) break;
                 long start = Stopwatch.GetTimestamp();
+                if (profiling) TargetProfiler.BeginTick();
                 tickManager.DoSingleTick();
+                if (profiling) TargetProfiler.EndTick();
                 elapsedTicks += Stopwatch.GetTimestamp() - start;
                 ticksLeft--;
             }
@@ -147,6 +177,7 @@ namespace ColonyScale
 
             if (phase == Phase.Measure)
             {
+                TargetProfiler.EndBlock();
                 double ms = elapsedTicks * 1000.0 / Stopwatch.Frequency / cfg.blockTicks;
                 blocks.Add((currentOn, ms, GC.CollectionCount(0) - gcAtStart));
                 blockIndex++;
@@ -189,6 +220,7 @@ namespace ColonyScale
             gcAtStart = GC.CollectionCount(0);
             ticksLeft = cfg.blockTicks;
             elapsedTicks = 0;
+            if (TargetProfiler.Installed) TargetProfiler.BeginBlock(currentOn, cfg.blockTicks);
         }
 
         /// <summary>Returns the optimizations whose actual Harmony patch state does not match the requested mode.</summary>
@@ -225,7 +257,9 @@ namespace ColonyScale
             for (int i = 0; i < blocks.Count; i++)
                 sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0}\t{1}\t{2:F4}\t{3}", i, blocks[i].on ? "on" : "off", blocks[i].msPerTick, blocks[i].gcs));
             sb.AppendLine("optimizations under test: " + string.Join(", ", userActive.Select(o => o.Id)));
+            if (keptOn.Count > 0) sb.AppendLine("kept on in both modes (ONLY=): " + string.Join(", ", keptOn.Select(o => o.Id)));
             if (cfg.verify) sb.Append("VERIFY RUN (timings not meaningful). ").Append(Verify.Report());
+            if (TargetProfiler.Installed) sb.Append("PROFILE RUN (totals include probe overhead). ").Append(TargetProfiler.Report(offMean));
             return sb.ToString();
         }
 
@@ -243,6 +277,7 @@ namespace ColonyScale
             var notRestored = new List<Optimization>();
             try
             {
+                TargetProfiler.Uninstall();
                 foreach (var opt in userActive)
                     if (!PatchManager.TryEnable(opt) || !PatchManager.HasAllPatchesOf(opt)) notRestored.Add(opt);
             }

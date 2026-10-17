@@ -9,8 +9,8 @@ namespace ColonyScale.Optimizations.Map
     /// <summary>
     /// ListerThings.Add/Remove/Contains, used for the map lister (30-80k things late game) and for every
     /// region lister a pawn steps through. Vanilla tests all ~80 thing groups per call through
-    /// ThingRequestGroup.Includes (reflection-heavy) and removes with List.Remove, a linear scan calling
-    /// Thing.Equals per element. Here the groups a def belongs to are computed once per (def, use) by calling
+    /// ThingRequestGroup.Includes (reflection-heavy) and removes with RemoveSwap (1.7: List.IndexOf, a linear scan
+    /// calling Thing.Equals per element, then the last element moves into the hole). Here the groups a def belongs to are computed once per (def, use) by calling
     /// vanilla Includes, and removal from the map lister searches from both ends where that is provably exact.
     ///
     /// Exact: lists, hashes and callbacks are updated in vanilla's order. Includes reads only the def's fields and
@@ -22,6 +22,8 @@ namespace ColonyScale.Optimizations.Map
     /// maximum when (re)built from the lists. A Remove touches the def list plus the cached groups' lists, the same
     /// set every Add of that class touched since the cache was built, so no touched list holds more equal elements
     /// than the count: a count of 1 makes the two-ended reference search exact, anything else scans front to back.
+    /// The found index is then removed the way vanilla's RemoveSwap does (<see cref="FastList.RemoveSwap"/>); swapping
+    /// changes order but not which elements each list holds, so the counts stay valid.
     /// ListerThings.Clear drops the counts. Assumes no mod mutates the lists ThingsMatching returns.
     ///
     /// Known difference, out of scope: if Includes throws (a malformed def, e.g. a Plant def without a plant block),
@@ -179,7 +181,7 @@ namespace ColonyScale.Optimizations.Map
             if (!ListerThings.EverListable(t.def, __instance.use)) return false;
             var occ = CountsFor(__instance);
             int atMost = occ?.Count(t) ?? int.MaxValue;
-            if (listsByDef(__instance).TryGetValue(t.def, out var value)) FastList.Remove(value, t, atMost);
+            if (listsByDef(__instance).TryGetValue(t.def, out var value)) FastList.RemoveSwap(value, t, atMost);
             if (t is IHaulSource item) haulSources(__instance).Remove(item);
 
             var groups = GroupCache.For(t.def, __instance.use);
@@ -188,7 +190,7 @@ namespace ColonyScale.Optimizations.Map
             for (int k = 0; k < groups.positions.Length; k++)
             {
                 // Same NullReferenceException as vanilla if the group list was never created.
-                FastList.Remove(lists[groups.positions[k]], t, atMost);
+                FastList.RemoveSwap(lists[groups.positions[k]], t, atMost);
                 hashes[groups.values[k]]++;
             }
             occ?.Removed(t);

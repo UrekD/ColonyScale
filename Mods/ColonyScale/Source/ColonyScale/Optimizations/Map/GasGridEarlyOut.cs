@@ -31,6 +31,9 @@ namespace ColonyScale.Optimizations.Map
             "Gas spreading and fading no longer does any work for map cells that contain no gas.";
         public override string Category => "Map";
 
+        // Performance Plus's sparse gas replaces GasGrid.Tick with its own active-cell loop.
+        public override IEnumerable<string> IncompatiblePackageIds => new[] { "axeno7.performanceplus" };
+
         private static readonly MethodInfo DissipateMethod = AccessTools.Method(typeof(GasGrid), "TryDissipateGases");
         private static readonly MethodInfo DiffuseMethod = AccessTools.Method(typeof(GasGrid), "TryDiffuseGases");
         private static readonly MethodInfo DissipateHelper = AccessTools.Method(typeof(GasGridEarlyOut), nameof(Dissipate));

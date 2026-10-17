@@ -1,0 +1,109 @@
+Colony Scale A/B benchmark
+game 1.7.4980 rev60, map pawns 195, colonists 43, things 36853
+blocks 8x2 of 1000 ticks, 15 ticks/frame, warmup 2500, 120 discarded ticks after each of 9 on/off switches
+off: 4.263 ms/tick (median 4.195)  errors 0
+on:  3.681 ms/tick (median 3.699)  errors 0
+speedup: 13.7% less tick time; tick-only TPS ceiling 235 -> 272 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	4.6715	13
+1	on	3.8836	11
+2	on	4.0720	11
+3	off	4.6754	13
+4	off	4.1338	13
+5	on	3.7929	11
+6	on	3.6044	11
+7	off	4.0861	13
+8	off	4.2265	13
+9	on	3.5765	11
+10	on	3.8672	11
+11	off	4.1644	12
+12	off	3.6973	11
+13	on	3.1810	10
+14	on	3.4693	10
+15	off	4.4490	11
+optimizations under test: reachabilityClearHostile, mergeSameDef, reservationIndex, pathOutputMemory, textSizeCache, silhouetteCache, windSwayPerFrame, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, questLodgerScan, situationalThoughts, entropyStatReuse, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick
+PROFILE RUN (totals include probe overhead). PROFILE (main thread, exclusive time in patched targets, ms per 1000 ticks, so 1000 = 1 ms/tick; probe overhead subtracted: 174 ns/call + 315 ns per nested probed call)
+-- inside DoSingleTick: 28 optimizations with calls
+optimization	off ms/1k	on ms/1k	saved ms/1k	saved % of off tick	off calls/tick	on calls/tick
+windSwayPerFrame	166.43	3.80	162.63	3.81	1.0	1.0
+contentsTickSkip	427.38	303.52	123.86	2.91	477.7	270.5
+listerThings	126.96	33.02	93.94	2.20	15.3	15.3
+hiddenDeselect	945.02	883.82	61.20	1.44	212.7	213.5
+reservationIndex	24.88	5.35	19.53	0.46	25.1	25.1
+settlementIdleTick	40.38	29.95	10.43	0.24	109.0	109.0
+entropyStatReuse	18.73	9.57	9.17	0.21	0.8	0.9
+statusEffecters	52.78	44.25	8.53	0.20	212.7	213.5
+connectivityIncremental	7.97	0.39	7.58	0.18	0.3	0.3
+resourceCounter	12.96	8.69	4.26	0.10	0.0	0.0
+gasGridEarlyOut	4.50	0.63	3.86	0.09	1.0	1.0
+mergeSameDef	8.72	6.29	2.43	0.06	0.2	0.2
+hediffTickPlan	60.99	59.28	1.70	0.04	212.7	213.5
+psychicRitualCooldownTick	2.51	0.89	1.62	0.04	1.0	1.0
+idleAbilities	22.06	20.67	1.39	0.03	60.0	60.8
+geneTicks	28.14	27.08	1.06	0.02	58.7	59.5
+nonSlotStorage	6.93	6.32	0.61	0.01	3.3	2.3
+musicListeningShortcut	1.32	0.90	0.42	0.01	0.9	0.9
+haulablesCellDedupe	8.21	7.84	0.36	0.01	1.0	1.0
+moodTotal	4.98	4.98	0.01	0.00	0.3	0.3
+overseerSubject	4.79	4.84	-0.05	-0.00	5.0	5.0
+questReserveFilter	1.37	1.77	-0.40	-0.01	4.4	4.6
+bloodRain	13.47	15.23	-1.76	-0.04	200.6	200.6
+roomStatsMemo	0.00	2.95	-2.95	-0.07	0.0	0.0
+questLodgerScan	0.71	4.88	-4.18	-0.10	159.2	159.0
+thingListRemovals	104.22	109.54	-5.31	-0.12	3.0	3.1
+situationalThoughts	109.61	117.21	-7.60	-0.18	0.4	0.4
+spawnedPawnWorldChecks	622.54	631.88	-9.34	-0.22	14.2	14.2
+per target (off ms/1k, on ms/1k, off calls/tick, on calls/tick):
+  windSwayPerFrame	WindManager.WindManagerTick	166.43	3.80	1.0	1.0
+  contentsTickSkip	Thing.DoTick	427.38	303.52	477.7	270.5
+  listerThings	ListerThings.Add	9.85	2.52	3.9	3.8
+  listerThings	ListerThings.Remove	77.69	12.51	3.9	3.9
+  listerThings	ListerThings.Contains	39.43	17.99	7.6	7.6
+  hiddenDeselect	Pawn.Tick	945.02	883.82	212.7	213.5	(shared with spawnedPawnWorldChecks)
+  reservationIndex	ReservationManager.CanReserve	23.00	4.60	22.6	22.8
+  reservationIndex	ReservationManager.CanReserveStack	0.01	0.13	0.0	0.0
+  reservationIndex	ReservationManager.IsReserved	0.12	0.19	0.0	0.0
+  reservationIndex	ReservationManager.TryGetReserver	0.01	0.02	0.0	0.0
+  reservationIndex	ReservationManager.ReservedBy	1.74	0.42	2.4	2.3
+  settlementIdleTick	WorldObject.DoTick	40.38	29.95	109.0	109.0
+  entropyStatReuse	Pawn_PsychicEntropyTracker.EntropyToRelativeValue	18.70	9.53	0.8	0.9
+  entropyStatReuse	Pawn_PsychicEntropyTracker.get_Severity	0.03	0.04	0.0	0.0
+  statusEffecters	PawnStatusEffecters.EffectersTick	52.78	44.25	212.7	213.5
+  connectivityIncremental	ConnectivitySource.UpdateIncrementally	7.97	0.39	0.3	0.3
+  resourceCounter	ResourceCounter.UpdateResourceCounts	12.96	8.69	0.0	0.0
+  gasGridEarlyOut	GasGrid.Tick	4.50	0.63	1.0	1.0
+  mergeSameDef	WorkGiver_Merge.JobOnThing	8.72	6.29	0.2	0.2
+  hediffTickPlan	Pawn_HealthTracker.HealthTick	60.99	59.28	212.7	213.5
+  psychicRitualCooldownTick	GameComponent_PsychicRitualManager.GameComponentTick	2.51	0.89	1.0	1.0
+  idleAbilities	Pawn_AbilityTracker.AbilitiesTick	22.06	20.67	60.0	60.8
+  geneTicks	Pawn_GeneTracker.GeneTrackerTick	26.00	24.98	55.0	55.8
+  geneTicks	Pawn_GeneTracker.GeneTrackerTickInterval	2.13	2.10	3.7	3.7
+  nonSlotStorage	StoreUtility.TryFindBestBetterNonSlotGroupStorageFor	6.93	6.32	3.3	2.3
+  musicListeningShortcut	ThoughtWorker_MusicalInstrumentListeningBase.CurrentStateInternal	1.32	0.90	0.9	0.9
+  haulablesCellDedupe	ListerHaulables.CellsCheckTick	8.21	7.84	1.0	1.0
+  moodTotal	ThoughtHandler.TotalMoodOffset	4.98	4.98	0.3	0.3
+  overseerSubject	CompOverseerSubject.CompTick	4.79	4.84	5.0	5.0
+  questReserveFilter	Quest.QuestReserves	0.96	1.38	2.7	2.7
+  questReserveFilter	QuestUtility.IsBorrowedByAnyFaction	0.40	0.39	1.7	1.9
+  bloodRain	BloodRainUtility.BloodRainTick	13.47	15.23	200.6	200.6
+  roomStatsMemo	Room.UpdateRoomStatsAndRole	0.00	2.72	0.0	0.0
+  roomStatsMemo	Room.get_ContainedAndAdjacentThings	0.00	0.23	0.0	0.0
+  questLodgerScan	QuestUtility.GetExtraFactionsFromQuestParts	0.70	4.88	159.2	159.0
+  questLodgerScan	Quest.AddPart	0.01	0.00	0.0	0.0
+  thingListRemovals	TickList.Tick	104.05	109.37	3.0	3.0
+  thingListRemovals	DynamicDrawManager.RegisterDrawable	0.01	0.10	0.0	0.0
+  thingListRemovals	DynamicDrawManager.DeRegisterDrawable	0.16	0.07	0.0	0.0
+  situationalThoughts	SituationalThoughtHandler.UpdateAllMoodThoughts	109.61	117.21	0.4	0.4
+  spawnedPawnWorldChecks	Pawn.TickInterval	622.54	631.88	14.2	14.2
+no calls here: reachabilityClearHostile, pathOutputMemory, textSizeCache, silhouetteCache, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, questMtbGate, worldPathGridDaily
+-- outside ticks (drawing, UI, other frame work; not part of the tick totals above): 3 optimizations with calls
+optimization	off ms/1k	on ms/1k	saved ms/1k	off calls/tick	on calls/tick
+overlayCulling	9.17	6.68	2.49	0.1	0.1
+pathDrawCulling	1.77	1.66	0.11	0.3	0.3
+questLodgerScan	0.00	0.01	-0.01	0.2	0.2
+per target (off ms/1k, on ms/1k, off calls/tick, on calls/tick):
+  overlayCulling	OverlayDrawer.DrawAllOverlays	9.17	6.68	0.1	0.1
+  pathDrawCulling	PawnPath.DrawPath	1.77	1.66	0.3	0.3
+  questLodgerScan	QuestUtility.GetExtraFactionsFromQuestParts	0.00	0.01	0.2	0.2
+no calls here: reachabilityClearHostile, mergeSameDef, reservationIndex, pathOutputMemory, textSizeCache, silhouetteCache, windSwayPerFrame, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, situationalThoughts, entropyStatReuse, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick
+shared targets (timed once, counted under the first optimization): Pawn.Tick under hiddenDeselect, shared with spawnedPawnWorldChecks

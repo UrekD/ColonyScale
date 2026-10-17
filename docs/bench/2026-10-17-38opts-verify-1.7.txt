@@ -1,0 +1,45 @@
+Colony Scale A/B benchmark
+game 1.7.4980 rev60, map pawns 133, colonists 43, things 9424
+blocks 2x2 of 300 ticks, 15 ticks/frame, warmup 600, 120 discarded ticks after each of 3 on/off switches
+off: 4.214 ms/tick (median 4.214)  errors 0
+on:  6.746 ms/tick (median 6.746)  errors 0
+speedup: -60.1% less tick time; tick-only TPS ceiling 237 -> 148 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	5.8026	0
+1	on	7.1647	5
+2	on	6.3273	5
+3	off	2.6262	0
+optimizations under test: reachabilityClearHostile, mergeSameDef, reservationIndex, pathOutputMemory, textSizeCache, silhouetteCache, windSwayPerFrame, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, questLodgerScan, situationalThoughts, entropyStatReuse, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick
+VERIFY RUN (timings not meaningful). verify results (checks / mismatches):
+  bloodRain: 180840 / 0
+  contentsTickSkip: 203018 / 0
+  entropyStatReuse: 17598 / 0
+  fastList.contains: 8938 / 0
+  fastList.remove: 38 / 0
+  fastList.removeSwap: 23173 / 0
+  gasGridEarlyOut: 3863340 / 0
+  haulablesCellDedupe: 1320 / 0
+  hediffTickPlan: 91696 / 0
+  hiddenDeselect: 180840 / 0
+  idleAbilities: 23760 / 0
+  moodTotal: 315 / 0
+  musicListeningShortcut: 1329 / 0
+  nonSlotStorage: 3696 / 0
+  overlayCulling: 1144 / 0
+  overseerSubject.tick: 5280 / 0
+  questLodgerScan: 133252 / 0
+  questReserveFilter: 2989 / 0
+  reservationIndex.CanReserve: 59171 / 0
+  reservationIndex.CanReserveStack: 2 / 0
+  reservationIndex.FirstRespectedReserver: 29 / 0
+  reservationIndex.index: 289 / 0
+  reservationIndex.IsReserved: 44 / 0
+  reservationIndex.ReservedBy: 21786 / 0
+  reservationIndex.TryGetReserver: 24 / 0
+  resourceCounter: 145 / 0
+  settlementIdleTick: 119504 / 0
+  situationalThoughts: 168412 / 0
+  spawnedPawnWorldChecks: 566632 / 0
+  statusEffecters: 89228 / 0
+  windSwayPerFrame: 88 / 0
+  worldPathGridDaily: 2 / 0

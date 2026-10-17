@@ -9,8 +9,10 @@
     <LangVersion>latest</LangVersion>
     <NoWarn>$(NoWarn);CS0618;MSB3277;NU1701;NU1903</NoWarn>
     <RimWorldDir Condition="'$(RIMWORLD_DIR)' != ''">$(RIMWORLD_DIR)</RimWorldDir>
-    <RimWorldDir Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'RimWorldWin64_Data/Managed/Assembly-CSharp.dll'))</RimWorldDir>
-    <ManagedDir>$(RimWorldDir)/RimWorldWin64_Data/Managed</ManagedDir>
+    <RimWorldDir Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Assembly-CSharp.dll'))</RimWorldDir>
+    <RimWorldParent Condition="'$(RimWorldDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'RimWorld/Assembly-CSharp.dll'))</RimWorldParent>
+    <RimWorldDir Condition="'$(RimWorldDir)' == '' and '$(RimWorldParent)' != ''">$(RimWorldParent)/RimWorld</RimWorldDir>
+    <ManagedDir>$(RimWorldDir)</ManagedDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,13 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <PackageReference Include="Lib.Harmony" Version="3.0.0-rc.3" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ManagedDir)/UnityEngine.IMGUIModule.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(ManagedDir)/UnityEngine.TextRenderingModule.dll</HintPath><Private>False</Private></Reference>
+    <!-- 1.7 has no Unity: the game redirects UnityEngine* to UnityStubs.dll. -->
+    <Reference Include="UnityStubs"><HintPath>$(ManagedDir)/UnityStubs.dll</HintPath><Private>False</Private></Reference>
   </ItemGroup>
 </Project>

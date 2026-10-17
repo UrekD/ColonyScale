@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
 # Headless in-game benchmark (`make bench`): quick-test colony + added load, interleaved A/B of every
 # active Colony Scale optimization, report written by the mod, game quits itself.
-# Env: MODE=bench|verify (verify: optimizations also run vanilla and count mismatches; timings meaningless;
+# Env: MODE=bench|verify|profile (profile: also times each optimization's patched targets off vs on, see
+#      TargetProfiler; totals include the probe cost; verify: optimizations also run vanilla and count mismatches; timings meaningless;
 #      the mod also adds rot stink, a 2-cell stockpile with items and selected colonists, and recalculates the
 #      world path costs once verify is on, so paths the quick-test colony never reaches get checked)
-#      COLONISTS=40 ANIMALS=80 ITEMS=400 ROUNDS=4 BLOCK=500 TPF=15 RW_TIMEOUT=2400
+#      COLONISTS=40 ANIMALS=80 ITEMS=400 ROUNDS=4 BLOCK=500 TPF=15 WARMUP=600 SETTLE=120 RW_TIMEOUT=2400
+#      ONLY=id1,id2 (switch only these optimizations; the others stay on throughout)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 root=$PWD
-tools/headless/setup-harmony.sh
+. tools/headless/game-dir.sh
+# The run install needs the Harmony mod and a link to this checkout (no-ops when they are already there).
+RIMWORLD_DIR=$RW_GAME_DIR tools/headless/setup-harmony.sh
+RIMWORLD_DIR=$RW_GAME_DIR tools/link-mod.sh
+version=$(tr -d '\r\n' < "$RW_GAME_DIR/Version.txt")
+# Core plus whichever expansions this install has.
+dlcs=()
+for d in Royalty Ideology Biotech Anomaly Odyssey; do [[ -d $RW_GAME_DIR/Data/$d ]] && dlcs+=("ludeon.rimworld.${d,,}"); done
+dlc_items() { local x; for x in "${dlcs[@]}"; do printf '    <li>%s</li>\n' "$x"; done; }
 
 mode=${MODE:-bench}
 dir=$root/.work/bench/$mode
@@ -32,23 +42,15 @@ PREFS
 cat > "$dir/savedata/Config/ModsConfig.xml" <<MODS
 <?xml version="1.0" encoding="utf-8"?>
 <ModsConfigData>
-  <version>1.6.4871 rev591</version>
+  <version>$version</version>
   <activeMods>
     <li>brrainz.harmony</li>
     <li>ludeon.rimworld</li>
-    <li>ludeon.rimworld.royalty</li>
-    <li>ludeon.rimworld.ideology</li>
-    <li>ludeon.rimworld.biotech</li>
-    <li>ludeon.rimworld.anomaly</li>
-    <li>ludeon.rimworld.odyssey</li>
+$(dlc_items)
     <li>urekd.colonyscale</li>
   </activeMods>
   <knownExpansions>
-    <li>ludeon.rimworld.royalty</li>
-    <li>ludeon.rimworld.ideology</li>
-    <li>ludeon.rimworld.biotech</li>
-    <li>ludeon.rimworld.anomaly</li>
-    <li>ludeon.rimworld.odyssey</li>
+$(dlc_items)
   </knownExpansions>
 </ModsConfigData>
 MODS
@@ -60,15 +62,18 @@ itemStacks=${ITEMS:-400}
 rounds=${ROUNDS:-4}
 blockTicks=${BLOCK:-500}
 ticksPerFrame=${TPF:-15}
-warmupTicks=600
+warmupTicks=${WARMUP:-600}
 settleTicks=${SETTLE:-120}
 verify=$([ "$mode" = verify ] && echo true || echo false)
-output=Z:$report
+profile=$([ "$mode" = profile ] && echo true || echo false)
+only=${ONLY:-}
+output=$report
 quitWhenDone=true
+start=quicktest
 CFG
 
 RW_SAVEDATA=$dir/savedata RW_LOG=$dir/game.log RW_TIMEOUT=${RW_TIMEOUT:-2400} \
-  tools/headless/run-game.sh -quicktest "-colonyscale-bench=Z:$dir/bench.cfg" || true
+  tools/headless/run-game.sh "-colonyscale-bench=$dir/bench.cfg" || true
 
 echo "== game log: $(grep -c -E 'Exception|^ERROR|\[ColonyScale\].*(off|mismatch)' "$dir/game.log" 2>/dev/null || echo 0) error/warning lines (see $dir/game.log)"
 grep -E '\[ColonyScale\]' "$dir/game.log" 2>/dev/null | head -40 || true

@@ -1,0 +1,67 @@
+Colony Scale A/B benchmark
+game 1.7.4980 rev60, map pawns 189, colonists 43, things 46272
+blocks 10x2 of 1000 ticks, 15 ticks/frame, warmup 2500, 120 discarded ticks after each of 11 on/off switches
+off: 3.011 ms/tick (median 3.003)  errors 0
+on:  2.985 ms/tick (median 2.980)  errors 0
+speedup: 0.9% less tick time; tick-only TPS ceiling 332 -> 335 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	3.3148	6
+1	on	3.2754	6
+2	on	3.2577	6
+3	off	3.3799	6
+4	off	3.2102	6
+5	on	3.3695	7
+6	on	2.7012	6
+7	off	2.8056	6
+8	off	2.7458	6
+9	on	2.6990	6
+10	on	3.0393	6
+11	off	2.9282	6
+12	off	2.6455	6
+13	on	3.0702	6
+14	on	2.7651	6
+15	off	3.1569	6
+16	off	2.8431	6
+17	on	2.7494	6
+18	on	2.9217	6
+19	off	3.0783	6
+optimizations under test: pathOutputMemory, nonSlotStorage, thingListRemovals, gasGridEarlyOut, haulablesCellDedupe, bloodRain, statusEffecters, questLodgerScan, entropyStatReuse, moodTotal, geneTicks, hediffTickPlan, questReserveFilter
+PROFILE RUN (totals include probe overhead). PROFILE (main thread, exclusive time in patched targets; probe overhead 112 ns/call subtracted; ms per 1000 ticks, so 1000 ms = 1 ms/tick)
+optimization	off ms/1k	on ms/1k	saved ms/1k	saved % of off tick	off calls/tick	on calls/tick
+entropyStatReuse	21.06	8.95	12.11	0.40	0.8	0.9
+thingListRemovals	2007.13	1999.43	7.69	0.26	3.0	3.0
+gasGridEarlyOut	3.37	0.21	3.16	0.10	1.0	1.0
+bloodRain	15.09	12.12	2.98	0.10	192.0	192.0
+statusEffecters	42.30	40.70	1.61	0.05	205.2	205.8
+hediffTickPlan	55.07	54.34	0.73	0.02	205.2	205.8
+moodTotal	5.78	5.53	0.26	0.01	0.3	0.3
+haulablesCellDedupe	9.42	9.32	0.10	0.00	1.0	1.0
+pathOutputMemory	0.00	0.00	0.00	0.00	0.0	0.0
+nonSlotStorage	0.93	1.05	-0.11	-0.00	3.1	2.1
+questReserveFilter	1.35	1.92	-0.57	-0.02	10.0	9.5
+geneTicks	23.75	24.43	-0.68	-0.02	59.9	60.6
+questLodgerScan	3.11	7.90	-4.79	-0.16	159.7	159.6
+per target (off ms/1k, on ms/1k, off calls/tick, on calls/tick):
+  entropyStatReuse	Pawn_PsychicEntropyTracker.EntropyToRelativeValue	20.99	8.90	0.8	0.9
+  entropyStatReuse	Pawn_PsychicEntropyTracker.get_Severity	0.07	0.05	0.0	0.0
+  thingListRemovals	TickList.Tick	2006.97	1999.30	3.0	3.0
+  thingListRemovals	TickList.Reset	0.00	0.00	0.0	0.0
+  thingListRemovals	TickList.RemoveWhere	0.00	0.00	0.0	0.0
+  thingListRemovals	DynamicDrawManager.RegisterDrawable	0.01	0.07	0.0	0.0
+  thingListRemovals	DynamicDrawManager.DeRegisterDrawable	0.15	0.06	0.0	0.0
+  gasGridEarlyOut	GasGrid.Tick	3.37	0.21	1.0	1.0
+  bloodRain	BloodRainUtility.BloodRainTick	15.09	12.12	192.0	192.0
+  statusEffecters	PawnStatusEffecters.EffectersTick	42.30	40.70	205.2	205.8
+  hediffTickPlan	Pawn_HealthTracker.HealthTick	55.07	54.34	205.2	205.8
+  moodTotal	ThoughtHandler.TotalMoodOffset	5.78	5.53	0.3	0.3
+  haulablesCellDedupe	ListerHaulables.CellsCheckTick	9.42	9.32	1.0	1.0
+  pathOutputMemory	PathJobOutput.Initialize	0.00	0.00	0.0	0.0
+  nonSlotStorage	StoreUtility.TryFindBestBetterNonSlotGroupStorageFor	0.93	1.05	3.1	2.1
+  questReserveFilter	Quest.QuestReserves	0.91	1.39	6.1	5.4
+  questReserveFilter	QuestUtility.IsBorrowedByAnyFaction	0.44	0.53	3.8	4.1
+  geneTicks	Pawn_GeneTracker.GeneTrackerTick	22.22	22.91	56.2	56.8
+  geneTicks	Pawn_GeneTracker.GeneTrackerTickInterval	1.53	1.52	3.7	3.8
+  questLodgerScan	QuestUtility.GetExtraFactionsFromQuestParts	3.10	7.90	159.7	159.6
+  questLodgerScan	Quest.End	0.00	0.00	0.0	0.0
+  questLodgerScan	Quest.AddPart	0.00	0.00	0.0	0.0
+  questLodgerScan	Quest.RemovePart	0.00	0.00	0.0	0.0

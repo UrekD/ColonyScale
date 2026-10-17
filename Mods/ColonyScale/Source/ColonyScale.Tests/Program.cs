@@ -21,7 +21,7 @@ namespace ColonyScale.Tests
     {
         private static string ManagedDir =>
             Path.Combine(Environment.GetEnvironmentVariable("RIMWORLD_DIR")
-                ?? throw new InvalidOperationException("RIMWORLD_DIR is not set (the Makefile sets it; run the checker through make)"), "RimWorldWin64_Data", "Managed");
+                ?? throw new InvalidOperationException("RIMWORLD_DIR is not set (the Makefile sets it; run the checker through make)"));
 
         public static int Main(string[] args)
         {
@@ -32,6 +32,9 @@ namespace ColonyScale.Tests
                 if (name.Name == "mscorlib" || name.Name == "netstandard" || name.Name.StartsWith("System")) return null;
                 return File.Exists(path) ? ctx.LoadFromAssemblyPath(path) : null;
             };
+            // In the game RimWorld.dll is the entry assembly (the 1.7 host: GUI backend, renderer); optimizations look
+            // its internal types up by name, so load it as the game would have it.
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(ManagedDir, "RimWorld.dll"));
             return Run(args);
         }
 
@@ -168,6 +171,8 @@ namespace ColonyScale.Tests
             }
             harmony.UnpatchAll(harmony.Id);
             problems += ListSemanticsCheck.Run();
+            try { problems += ListerThingsDiffCheck.Run(); }
+            catch (Exception e) { problems++; Console.WriteLine("FAIL  listerThings differential threw: " + e); }
             int managerProblems = PatchManagerTest.Run(msg => Console.WriteLine("FAIL  patch manager self-test: " + msg));
             problems += managerProblems;
             if (managerProblems == 0) Console.WriteLine("ok    patch manager self-test");

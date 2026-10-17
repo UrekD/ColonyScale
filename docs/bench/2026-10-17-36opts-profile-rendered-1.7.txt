@@ -1,0 +1,114 @@
+Colony Scale A/B benchmark
+game 1.7.4980 rev60, map pawns 187, colonists 43, things 29942
+blocks 3x2 of 300 ticks, 15 ticks/frame, warmup 1000, 120 discarded ticks after each of 4 on/off switches
+off: 12.284 ms/tick (median 13.132)  errors 0
+on:  7.622 ms/tick (median 7.547)  errors 0
+speedup: 37.9% less tick time; tick-only TPS ceiling 81 -> 131 (DoSingleTick time only, excludes rendering and other frame work)
+block	mode	ms/tick	gen0 GCs
+0	off	13.1322	4
+1	on	9.0867	3
+2	on	7.5472	3
+3	off	15.7365	4
+4	off	7.9821	4
+5	on	6.2330	3
+optimizations under test: reachabilityClearHostile, mergeSameDef, reservationIndex, textSizeCache, silhouetteCache, windSwayPerFrame, overlayCulling, pathDrawCulling, pawnPreDrawSkip, wastepackDissolution, connectivityIncremental, resourceCounter, roomStatsMemo, nonSlotStorage, listerThings, thingListRemovals, gasGridEarlyOut, contentsTickSkip, haulablesCellDedupe, bloodRain, hiddenDeselect, statusEffecters, overseerSubject, questLodgerScan, situationalThoughts, moodTotal, idleAbilities, geneTicks, hediffTickPlan, musicListeningShortcut, spawnedPawnWorldChecks, psychicRitualCooldownTick, questMtbGate, worldPathGridDaily, questReserveFilter, settlementIdleTick
+PROFILE RUN (totals include probe overhead). PROFILE (main thread, exclusive time in patched targets; probe overhead 116 ns/call subtracted; ms per 1000 ticks, so 1000 ms = 1 ms/tick)
+optimization	off ms/1k	on ms/1k	saved ms/1k	saved % of off tick	off calls/tick	on calls/tick
+spawnedPawnWorldChecks	3404.59	1358.69	2045.90	16.66	24.8	24.9
+hiddenDeselect	2511.49	1911.49	600.01	4.88	204.0	204.0
+contentsTickSkip	1107.05	620.66	486.39	3.96	536.7	276.7
+windSwayPerFrame	368.72	9.37	359.36	2.93	1.0	1.0
+listerThings	308.38	50.08	258.30	2.10	17.5	17.5
+reservationIndex	68.03	20.79	47.24	0.38	34.5	29.4
+hediffTickPlan	122.29	82.89	39.40	0.32	204.0	204.0
+thingListRemovals	305.54	269.56	35.98	0.29	3.0	3.0
+settlementIdleTick	81.88	49.64	32.24	0.26	105.0	105.0
+situationalThoughts	201.08	169.61	31.47	0.26	0.4	0.4
+geneTicks	81.70	54.44	27.26	0.22	73.1	73.1
+bloodRain	43.08	19.21	23.87	0.19	189.0	189.0
+connectivityIncremental	15.72	0.44	15.28	0.12	0.3	0.2
+resourceCounter	33.08	18.64	14.45	0.12	0.1	0.1
+pawnPreDrawSkip	113.71	99.54	14.17	0.12	8.5	8.2
+idleAbilities	47.70	38.03	9.67	0.08	60.0	60.0
+statusEffecters	89.02	80.50	8.52	0.07	204.0	204.0
+textSizeCache	8.39	1.71	6.68	0.05	8.6	8.6
+overlayCulling	10.90	7.01	3.89	0.03	0.1	0.1
+haulablesCellDedupe	10.07	7.58	2.49	0.02	1.0	1.0
+psychicRitualCooldownTick	4.57	2.31	2.26	0.02	1.0	1.0
+gasGridEarlyOut	2.91	1.44	1.47	0.01	1.0	1.0
+musicListeningShortcut	1.75	1.11	0.65	0.01	0.9	0.9
+overseerSubject	4.34	4.13	0.22	0.00	2.0	2.0
+reachabilityClearHostile	0.00	0.00	0.00	0.00	0.0	0.0
+mergeSameDef	0.00	0.00	0.00	0.00	0.0	0.0
+silhouetteCache	0.00	0.00	0.00	0.00	0.0	0.0
+pathDrawCulling	0.00	0.00	0.00	0.00	0.0	0.0
+wastepackDissolution	0.00	0.00	0.00	0.00	0.0	0.0
+roomStatsMemo	0.00	0.00	0.00	0.00	0.0	0.0
+questMtbGate	0.00	0.00	0.00	0.00	0.0	0.0
+worldPathGridDaily	0.00	0.00	0.00	0.00	0.0	0.0
+questReserveFilter	0.00	0.00	0.00	0.00	0.0	0.0
+nonSlotStorage	9.94	12.23	-2.29	-0.02	1.2	1.2
+moodTotal	7.17	12.79	-5.62	-0.05	0.3	0.3
+questLodgerScan	6.11	19.46	-13.35	-0.11	92.3	92.1
+per target (off ms/1k, on ms/1k, off calls/tick, on calls/tick):
+  spawnedPawnWorldChecks	Pawn.TickInterval	3404.59	1358.69	24.8	24.9
+  spawnedPawnWorldChecks	Pawn.ProcessPostTickVisuals	0.00	0.00	0.0	0.0
+  hiddenDeselect	Pawn.Tick	2511.49	1911.49	204.0	204.0
+  contentsTickSkip	Thing.DoTick	1107.05	620.66	536.7	276.7
+  windSwayPerFrame	WindManager.WindManagerTick	368.72	9.37	1.0	1.0
+  listerThings	ListerThings.Add	20.71	3.45	4.4	4.4
+  listerThings	ListerThings.Remove	215.82	20.11	4.4	4.4
+  listerThings	ListerThings.Contains	71.85	26.51	8.7	8.7
+  listerThings	ListerThings.Clear	0.00	0.00	0.0	0.0
+  reservationIndex	ReservationManager.CanReserve	54.98	17.74	27.3	23.0
+  reservationIndex	ReservationManager.CanReserveStack	0.00	0.00	0.0	0.0
+  reservationIndex	ReservationManager.IsReserved	0.24	0.27	0.0	0.0
+  reservationIndex	ReservationManager.ReserversOf	0.00	0.00	0.0	0.0
+  reservationIndex	ReservationManager.TryGetReserver	0.03	1.42	0.0	0.0
+  reservationIndex	ReservationManager.OnlyReservationsForJobDef	0.00	0.00	0.0	0.0
+  reservationIndex	ReservationManager.FirstRespectedReserver	0.00	0.00	0.0	0.0
+  reservationIndex	ReservationManager.ReservedBy	12.78	1.36	7.2	6.4
+  reservationIndex	ReservationManager.ExposeData	0.00	0.00	0.0	0.0
+  hediffTickPlan	Pawn_HealthTracker.HealthTick	122.29	82.89	204.0	204.0
+  thingListRemovals	TickList.Tick	305.43	269.41	3.0	3.0
+  thingListRemovals	TickList.Reset	0.00	0.00	0.0	0.0
+  thingListRemovals	TickList.RemoveWhere	0.00	0.00	0.0	0.0
+  thingListRemovals	DynamicDrawManager.RegisterDrawable	0.00	0.02	0.0	0.0
+  thingListRemovals	DynamicDrawManager.DeRegisterDrawable	0.11	0.13	0.0	0.0
+  settlementIdleTick	WorldObject.DoTick	81.88	49.64	105.0	105.0
+  situationalThoughts	SituationalThoughtHandler.UpdateAllMoodThoughts	201.08	169.61	0.4	0.4
+  geneTicks	Pawn_GeneTracker.GeneTrackerTick	72.58	50.22	58.0	58.0
+  geneTicks	Pawn_GeneTracker.GeneTrackerTickInterval	9.12	4.22	15.1	15.1
+  bloodRain	BloodRainUtility.BloodRainTick	43.08	19.21	189.0	189.0
+  connectivityIncremental	ConnectivitySource.UpdateIncrementally	15.72	0.44	0.3	0.2
+  resourceCounter	ResourceCounter.UpdateResourceCounts	33.08	18.64	0.1	0.1
+  pawnPreDrawSkip	PawnRenderTree.Draw	113.71	99.54	8.5	8.2
+  idleAbilities	Pawn_AbilityTracker.AbilitiesTick	47.70	38.03	60.0	60.0
+  statusEffecters	PawnStatusEffecters.EffectersTick	89.02	80.50	204.0	204.0
+  textSizeCache	Text.CalcSize	8.39	1.71	8.6	8.6
+  overlayCulling	OverlayDrawer.DrawAllOverlays	10.90	7.01	0.1	0.1
+  haulablesCellDedupe	ListerHaulables.CellsCheckTick	10.07	7.58	1.0	1.0
+  psychicRitualCooldownTick	GameComponent_PsychicRitualManager.GameComponentTick	4.57	2.31	1.0	1.0
+  gasGridEarlyOut	GasGrid.Tick	2.91	1.44	1.0	1.0
+  musicListeningShortcut	ThoughtWorker_MusicalInstrumentListeningBase.CurrentStateInternal	1.75	1.11	0.9	0.9
+  overseerSubject	CompOverseerSubject.CompTick	4.34	4.13	2.0	2.0
+  overseerSubject	CompOverseerSubject.get_State	0.00	0.00	0.0	0.0
+  reachabilityClearHostile	ReachabilityCache.ClearForHostile	0.00	0.00	0.0	0.0
+  mergeSameDef	WorkGiver_Merge.JobOnThing	0.00	0.00	0.0	0.0
+  silhouetteCache	SilhouetteUtility.GetCachedSilhouetteData	0.00	0.00	0.0	0.0
+  silhouetteCache	SilhouetteUtility.NotifyGraphicDirty	0.00	0.00	0.0	0.0
+  pathDrawCulling	PawnPath.DrawPath	0.00	0.00	0.0	0.0
+  wastepackDissolution	CompDissolution.CompTick	0.00	0.00	0.0	0.0
+  roomStatsMemo	Room.UpdateRoomStatsAndRole	0.00	0.00	0.0	0.0
+  roomStatsMemo	Room.get_ContainedAndAdjacentThings	0.00	0.00	0.0	0.0
+  questMtbGate	QuestPart_MTB.QuestPartTick	0.00	0.00	0.0	0.0
+  worldPathGridDaily	WorldPathGrid.RecalculateLayerPerceivedPathCosts	0.00	0.00	0.0	0.0
+  worldPathGridDaily	PlanetLayer.InitializeLayer	0.00	0.00	0.0	0.0
+  questReserveFilter	Quest.QuestReserves	0.00	0.00	0.0	0.0
+  questReserveFilter	QuestUtility.IsBorrowedByAnyFaction	0.00	0.00	0.0	0.0
+  nonSlotStorage	StoreUtility.TryFindBestBetterNonSlotGroupStorageFor	9.94	12.23	1.2	1.2
+  moodTotal	ThoughtHandler.TotalMoodOffset	7.17	12.79	0.3	0.3
+  questLodgerScan	QuestUtility.GetExtraFactionsFromQuestParts	6.11	19.46	92.3	92.1
+  questLodgerScan	Quest.End	0.00	0.00	0.0	0.0
+  questLodgerScan	Quest.AddPart	0.00	0.00	0.0	0.0
+  questLodgerScan	Quest.RemovePart	0.00	0.00	0.0	0.0

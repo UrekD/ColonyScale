@@ -70,6 +70,49 @@ namespace ColonyScale.Tests
                 catch (NullReferenceException) { }
             }
 
+            // 1.7's ListerThings.RemoveSwap: first equal element (List.IndexOf) gets the last element, the last slot goes.
+            void VanillaRemoveSwap(List<Thing> list, Thing t)
+            {
+                int i = list.IndexOf(t);
+                if (i < 0) return;
+                int last = list.Count - 1;
+                list[i] = list[last];
+                list.RemoveAt(last);
+            }
+            foreach (int atMost in new[] { 0, 1, 2 })
+            {
+                try
+                {
+                    FastList.RemoveSwap(null, Make(item, 1), atMost);
+                    Fail("FastList.RemoveSwap on a null list did not throw (atMost " + atMost + ")");
+                }
+                catch (NullReferenceException) { }
+            }
+            {
+                var swapRand = new Random(424242);
+                for (int round = 0; round < 2000; round++)
+                {
+                    var pool = new List<Thing>();
+                    for (int i = 0; i < 5; i++) pool.Add(Make(item, swapRand.Next(4)));      // twins
+                    for (int i = 0; i < 2; i++) pool.Add(Make(mote, -1));
+                    pool.Add(null);
+                    var list = new List<Thing>();
+                    for (int i = swapRand.Next(12); i > 0; i--) list.Add(pool[swapRand.Next(pool.Count)]);
+                    Thing t = pool[swapRand.Next(pool.Count)];
+                    int equal = list.Count(e => e != null && e.Equals(t)) + (t == null ? list.Count(e => e == null) : 0);
+                    // Any bound at least the true count is allowed (Occurrences may overcount, never undercount).
+                    int atMost = equal + swapRand.Next(2);
+                    var expected = new List<Thing>(list);
+                    VanillaRemoveSwap(expected, t);
+                    bool removed = FastList.RemoveSwap(list, t, atMost);
+                    if (!list.SequenceEqual(expected) || removed != (equal > 0))
+                    {
+                        Fail($"FastList.RemoveSwap differs from vanilla RemoveSwap (round {round}, atMost {atMost})");
+                        break;
+                    }
+                }
+            }
+
             // Random operation sequences over a small pool so duplicates, twins, motes and nulls are frequent.
             var rand = new Random(12345);
             int trackedRemovals = 0;

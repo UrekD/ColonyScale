@@ -11,7 +11,7 @@ else
   # Decompile next to the target and move it in only when complete, so a failed run is not taken as done later.
   partial="$dir.partial"
   rm -rf "$partial" && mkdir -p "$partial"
-  ilspycmd -p -o "$partial" "${RIMWORLD_DIR:?set RIMWORLD_DIR (make sets it)}/RimWorldWin64_Data/Managed/Assembly-CSharp.dll" > /dev/null
+  ilspycmd -p -o "$partial" "${RIMWORLD_DIR:?set RIMWORLD_DIR (make sets it)}/Assembly-CSharp.dll" > /dev/null
   mv "$partial" "$dir"
   echo "decompiled to $dir"
 fi

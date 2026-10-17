@@ -31,6 +31,9 @@ namespace ColonyScale
 
         private void Update()
         {
+            // 1.7's Unity layer (Waylith) can update a component in the frame it was added, before CheckCommandLine
+            // has assigned cfg.
+            if (cfg == null) return;
             if (cfg.quickTest && !quickTestQueued && Current.ProgramState == ProgramState.Entry && !LongEventHandler.AnyEventNowOrWaiting)
             {
                 quickTestQueued = true;
@@ -57,7 +60,7 @@ namespace ColonyScale
             try
             {
                 Populate(Find.CurrentMap, cfg);
-                if (cfg.verify) AddVerifyCoverage(Find.CurrentMap);
+                if (cfg.verify || cfg.profile) AddVerifyCoverage(Find.CurrentMap);
             }
             catch (Exception e)
             {
@@ -70,12 +73,12 @@ namespace ColonyScale
         }
 
         /// <summary>
-        /// Verify runs only: puts the map into states the quick-test colony never reaches, so the optimizations that
-        /// act only there record checks. Rot stink (gasGridEarlyOut: GasGrid.Tick returns early until gas ever existed,
+        /// Verify and profile runs only: puts the map into states the quick-test colony never reaches, so the optimizations
+        /// that act only there record checks (and get measured). Rot stink (gasGridEarlyOut: GasGrid.Tick returns early until gas ever existed,
         /// and the cloud lasts roughly 4000 ticks outdoors), a separate 2-cell stockpile holding items
         /// (haulablesCellDedupe: only 1-3 cell slot groups revisit a cell within one CellsCheckTick), and selected
         /// colonists, whose paths are drawn (pathDrawCulling has no verify counter; this only runs its code, and the
-        /// error count of the report covers it).
+        /// error count of the report covers it), and psycasters with neural heat (entropyStatReuse).
         /// </summary>
         private static void AddVerifyCoverage(Map map)
         {
@@ -104,7 +107,20 @@ namespace ColonyScale
                 var selected = map.mapPawns.FreeColonistsSpawned.Take(5).ToList();
                 foreach (var pawn in selected) Find.Selector.Select(pawn, playSound: false, forceDesignatorDeselect: false);
 
-                CSLog.Message($"verify coverage added: rot stink at {gasAt}, 2-cell stockpile at {pileAt}, {selected.Count} colonists selected");
+                // entropyStatReuse: psycasters with neural heat, two of them over their limit (the MaxPotentialEntropy branch).
+                int heated = 0;
+                if (ModsConfig.RoyaltyActive)
+                {
+                    foreach (var pawn in map.mapPawns.FreeColonistsSpawned.Skip(5).Take(6))
+                    {
+                        pawn.ChangePsylinkLevel(1, sendLetter: false);
+                        if (pawn.psychicEntropy == null) continue;
+                        pawn.psychicEntropy.TryAddEntropy(heated < 2 ? 60f : 15f, scale: false, overLimit: true);
+                        heated++;
+                    }
+                }
+
+                CSLog.Message($"verify coverage added: rot stink at {gasAt}, 2-cell stockpile at {pileAt}, {selected.Count} colonists selected, {heated} psycasters with neural heat");
             }
             finally
             {

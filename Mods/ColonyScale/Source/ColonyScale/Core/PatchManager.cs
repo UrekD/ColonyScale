@@ -69,6 +69,8 @@ namespace ColonyScale
     public static class PatchManager
     {
         public const string HarmonyId = "UrekD.ColonyScale";
+        /// <summary>Owner of the benchmark's profiling probes (TargetProfiler).</summary>
+        public const string ProfileHarmonyId = HarmonyId + ".Profile";
 
         private static Harmony harmony;
         public static List<Optimization> All { get; private set; } = new List<Optimization>();
@@ -307,7 +309,7 @@ namespace ColonyScale
         /// </summary>
         private static string ForeignPatches(MethodBase method)
         {
-            var owners = AllPatches(Harmony.GetPatchInfo(method)).Select(t => t.owner).Where(o => o != HarmonyId).Distinct().ToList();
+            var owners = AllPatches(Harmony.GetPatchInfo(method)).Select(t => t.owner).Where(o => !IsOwn(o)).Distinct().ToList();
             return owners.Count == 0 ? null : "another mod patches " + Describe(method) + ": " + string.Join(", ", owners);
         }
 
@@ -325,9 +327,12 @@ namespace ColonyScale
             var bodyPatches = info.Transpilers.Concat(InnerPrefixes(info)).Concat(InnerPostfixes(info));
             var latePrefixes = info.Prefixes.Where(x =>
                 x.priority <= ours || (x.before != null && x.before.Length > 0) || (x.after != null && x.after.Length > 0));
-            var owners = bodyPatches.Concat(latePrefixes).Select(t => t.owner).Where(o => o != HarmonyId).Distinct().ToList();
+            var owners = bodyPatches.Concat(latePrefixes).Select(t => t.owner).Where(o => !IsOwn(o)).Distinct().ToList();
             return owners.Count == 0 ? null : "another mod patches " + Describe(spec.Target) + ", which this replaces: " + string.Join(", ", owners);
         }
+
+        /// <summary>Our optimizations, or the benchmark's profiling probe (a first prefix and a finalizer that only time the call).</summary>
+        private static bool IsOwn(string owner) => owner == HarmonyId || owner == ProfileHarmonyId;
 
         private static string Describe(MethodBase method) => method.DeclaringType?.Name + "." + method.Name;
 

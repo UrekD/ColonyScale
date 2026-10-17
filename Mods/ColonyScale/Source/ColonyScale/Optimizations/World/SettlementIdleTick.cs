@@ -41,8 +41,9 @@ namespace ColonyScale.Optimizations.World
             "Grows with the number of settlements on the world.";
         public override string Category => "World";
 
-        // Free Performance's settlementtick prefixes the same method.
-        public override IEnumerable<string> IncompatiblePackageIds => new[] { "brage.paralleltick" };
+        // Free Performance's settlementtick prefixes the same method; Performance Plus's world dispatch replaces the
+        // world object tick loop and skips the same settlement ticks itself.
+        public override IEnumerable<string> IncompatiblePackageIds => new[] { "brage.paralleltick", "axeno7.performanceplus" };
 
         private static readonly AccessTools.FieldRef<WorldObject, int> tickDeltaRef = AccessTools.FieldRefAccess<WorldObject, int>("tickDelta");
         private static readonly AccessTools.FieldRef<Settlement_TraderTracker, ThingOwner<Thing>> stockRef =

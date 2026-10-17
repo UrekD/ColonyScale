@@ -1,11 +1,11 @@
-# The game install (Windows build, 1.6): defaults to the nearest folder at or above this one that holds
-# RimWorldWin64_Data/Managed/Assembly-CSharp.dll, i.e. the repo overlaid on a RimWorld install.
+# The game install (Windows build, 1.7): defaults to the nearest folder at or above this one that holds
+# Assembly-CSharp.dll or has a RimWorld/ subfolder that does (tools/rimworld-dir.sh).
 ifndef RIMWORLD_DIR
-RIMWORLD_DIR := $(shell d='$(CURDIR)'; while [ "$$d" != / ] && [ ! -f "$$d/RimWorldWin64_Data/Managed/Assembly-CSharp.dll" ]; do d=$$(dirname "$$d"); done; [ "$$d" != / ] && echo "$$d")
+RIMWORLD_DIR := $(shell tools/rimworld-dir.sh)
 endif
 ifeq ($(strip $(RIMWORLD_DIR)),)
 ifneq ($(filter-out clean,$(or $(MAKECMDGOALS),build)),)
-$(error No RimWorld install found at or above $(CURDIR); set RIMWORLD_DIR=/path/to/RimWorld)
+$(error No RimWorld install found at or above $(CURDIR) (or in a RimWorld/ subfolder of one); set RIMWORLD_DIR=/path/to/RimWorld)
 endif
 endif
 export RIMWORLD_DIR
@@ -18,7 +18,7 @@ BASELINE_IL  := tools/baseline/il
 DIST_DIR     ?= $(CURDIR)/dist
 CHECK        := dotnet run --project $(CHECK_PROJ) -c Release --no-build --
 
-.PHONY: build build-check test fingerprints update decompile bench dist clean
+.PHONY: build build-check test fingerprints update decompile link bench dist clean
 
 # ── Build ────────────────────────────────────────────
 build:
@@ -47,6 +47,10 @@ update:
 
 decompile: build-check
 	tools/decompile.sh "$$($(CHECK) gameversion)"
+
+# Make the game load this checkout (symlink in $(RIMWORLD_DIR)/Mods; no-op when overlaid on the install).
+link:
+	tools/link-mod.sh
 
 # Headless A/B benchmark under portable Wine (see tools/headless/).
 bench: build

@@ -57,8 +57,9 @@ namespace ColonyScale.Optimizations.AI
             "reservation on the map. Biggest effect with many pawns hauling, cooking and building at once.";
         public override string Category => "AI";
 
-        // Performance Fish has its own reservation patch; Free Performance's "reservedup" rewrites CanReserve.
-        public override IEnumerable<string> IncompatiblePackageIds => new[] { "bs.performancefish", "brage.paralleltick" };
+        // Performance Fish has its own reservation patch; Free Performance's "reservedup" and Performance Plus's
+        // reservation indexing rewrite CanReserve.
+        public override IEnumerable<string> IncompatiblePackageIds => new[] { "bs.performancefish", "brage.paralleltick", "axeno7.performanceplus" };
 
         private const string IdCanReserve = "reservationIndex.CanReserve";
         private const string IdCanReserveStack = "reservationIndex.CanReserveStack";

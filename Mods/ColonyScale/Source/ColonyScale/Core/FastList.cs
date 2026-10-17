@@ -93,18 +93,32 @@ namespace ColonyScale
         /// Exactly List&lt;Thing&gt;.Remove(t), given that at most <paramref name="atMost"/> elements of the list equal t
         /// (see <see cref="Occurrences"/>). 0 skips the scan; 1 tries the two-ended reference search first.
         /// </summary>
-        public static bool Remove(List<Thing> list, Thing t, int atMost)
+        public static bool Remove(List<Thing> list, Thing t, int atMost) => RemoveAt(list, t, IndexOf(list, t, atMost));
+
+        /// <summary>
+        /// Exactly 1.7's ListerThings.RemoveSwap(list, t): the first element equal to t (List.IndexOf) is overwritten
+        /// with the last element and the last slot removed, so order is not kept. Same <paramref name="atMost"/>
+        /// contract as <see cref="Remove(List{Thing}, Thing, int)"/>.
+        /// </summary>
+        public static bool RemoveSwap(List<Thing> list, Thing t, int atMost)
         {
-            int i;
-            _ = list.Count; // a null list throws here as it does in vanilla's List.Remove, also when atMost == 0
-            if (t == null || !VanillaEquality || atMost > 1) i = IndexOf(list, t);
-            else if (atMost == 0) i = -1;
-            else
-            {
-                i = IndexOfRef(list, t);
-                if (i < 0) i = IndexOf(list, t);
-            }
-            return RemoveAt(list, t, i);
+            int i = IndexOf(list, t, atMost);
+            if (Verify.Enabled) Verify.Record("fastList.removeSwap", i == list.IndexOf(t));
+            if (i < 0) return false;
+            int last = list.Count - 1;
+            list[i] = list[last];
+            list.RemoveAt(last);
+            return true;
+        }
+
+        /// <summary>Exactly List&lt;Thing&gt;.IndexOf(t), given that at most <paramref name="atMost"/> elements of the list equal t.</summary>
+        private static int IndexOf(List<Thing> list, Thing t, int atMost)
+        {
+            _ = list.Count; // a null list throws here as it does in vanilla's List.Remove/IndexOf, also when atMost == 0
+            if (t == null || !VanillaEquality || atMost > 1) return IndexOf(list, t);
+            if (atMost == 0) return -1;
+            int i = IndexOfRef(list, t);
+            return i >= 0 ? i : IndexOf(list, t);
         }
 
         /// <summary>Exactly List&lt;Thing&gt;.Contains(t).</summary>
